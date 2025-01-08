@@ -1,0 +1,20 @@
+{
+  "name": "GenHeatmap",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/liaozixin/GenHeatmap.git",
+  "author": "liaozx <1571155318@qq.com>",
+  "license": "MIT",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "heatmap.js": "^2.0.5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "vite": "^6.0.7",
+    "vite-plugin-compression": "^0.5.1"
+  }
+}
