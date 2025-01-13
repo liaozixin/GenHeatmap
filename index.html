@@ -2,9 +2,245 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GenHeatmap</title>
+    <!--全局style-->
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column; /* 垂直排列 */
+            justify-content: center; /* 垂直居中 */
+            align-items: center; /* 水平居中 */
+            height: 100vh;
+            margin: 0;
+        }
+    </style>
+    <!--上传框style-->
+    <style>
+        .upload-container {
+            display: block;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .upload-label {
+            display: block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .upload-label:hover {
+            background-color: #45a049;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .drag-drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            background-color: #fafafa;
+            color: #888;
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+
+        .drag-drop-area.dragover {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+
+        .upload-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .file-format-hint {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .confirm-button {
+            margin-top: 20px;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .confirm-button:hover {
+            background-color: #0056b3;
+        }
+
+        .confirm-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+    <!--画布style-->
+    <style>
+        #heatmap-canvas {
+            display: none;
+            width: 600px;
+            height: 400px;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
+<div class="upload-container">
+    <!-- 文件上传按钮 -->
+    <label for="fileInput" class="upload-label">
+        <div class="upload-icon">📁</div>
+        Choose File
+    </label>
+    <input type="file" id="fileInput" accept=".xlsx, .xls" />
 
+    <!-- 文件格式提示 -->
+    <div class="file-format-hint">Only .xlsx or .xls files are supported.</div>
+
+    <!-- 显示文件名 -->
+    <div class="file-name" id="fileName">No file chosen</div>
+
+    <!-- 拖放区域 -->
+    <div class="drag-drop-area" id="dragDropArea">
+        Drag and drop a file here
+    </div>
+
+    <!-- 确认上传按钮 -->
+    <button class="confirm-button" id="confirmButton" disabled>Confirm Upload</button>
+</div>
+<canvas id="heatmap-canvas"></canvas>
+
+<!-- 读取数据 -->
+<script type="module">
+    // 引入 xlsx 库
+    import * as XLSX from "xlsx";
+
+    // 获取元素
+    const fileInput = document.getElementById('fileInput');
+    const fileNameDisplay = document.getElementById('fileName');
+    const dragDropArea = document.getElementById('dragDropArea');
+    const confirmButton = document.getElementById('confirmButton');
+    const heatmapCanvas = document.getElementById('heatmap-canvas');
+    const uploadContainer = document.getElementById('upload-container');
+    const ctx = heatmapCanvas.getContext('2d');
+    // 用于保存上传的文件
+    let uploadedFile = null;
+
+    // 监听文件选择事件
+    fileInput.addEventListener('change', function (event) {
+        uploadedFile = event.target.files[0];
+        if (uploadedFile) {
+            fileNameDisplay.textContent = `Selected file: ${uploadedFile.name}`;
+            confirmButton.disabled = false; // 启用确认按钮
+        } else {
+            resetUploadContainer(); // 如果没有文件，重置状态
+        }
+    });
+
+    // 拖放功能
+    dragDropArea.addEventListener('dragover', function (event) {
+        event.preventDefault();
+        dragDropArea.classList.add('dragover');
+    });
+
+    dragDropArea.addEventListener('dragleave', function () {
+        dragDropArea.classList.remove('dragover');
+    });
+
+    dragDropArea.addEventListener('drop', function (event) {
+        event.preventDefault();
+        dragDropArea.classList.remove('dragover');
+
+        uploadedFile = event.dataTransfer.files[0];
+        if (uploadedFile) {
+            fileNameDisplay.textContent = `Selected file: ${uploadedFile.name}`;
+            fileInput.files = event.dataTransfer.files; // 将文件赋值给 input
+            confirmButton.disabled = false; // 启用确认按钮
+        } else {
+            resetUploadContainer(); // 如果没有文件，重置状态
+        }
+    });
+
+    // 确认上传按钮点击事件
+    confirmButton.addEventListener('click', function () {
+        if (uploadedFile) {
+            parseFile(uploadedFile); // 解析文件
+            resetUploadContainer(); // 解析完成后重置状态
+            showHeatmapCanvas();
+        } else {
+            alert('Please select a file first.');
+        }
+    });
+
+    // 解析文件
+    function parseFile(file) {
+        const reader = new FileReader();
+
+        // 读取文件内容
+        reader.onload = function (e) {
+            const arrayBuffer = e.target.result;
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+            // 获取第一个工作表
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            // 将工作表转换为 JSON 数据
+            const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            // 打印解析后的数据到控制台
+            console.log('Parsed data:', data);
+            alert('File parsed successfully! Check the console for details.');
+        };
+
+        // 以二进制形式读取文件
+        reader.readAsArrayBuffer(file);
+    }
+
+    // 重置上传容器的状态
+    function resetUploadContainer() {
+        fileInput.value = ''; // 清空文件输入框
+        fileNameDisplay.textContent = 'No file chosen'; // 重置文件名显示
+        confirmButton.disabled = true; // 禁用确认按钮
+        dragDropArea.classList.remove('dragover'); // 清除拖放区域的高亮状态
+        uploadedFile = null; // 重置上传的文件
+    }
+
+    // 显示canvas
+    function showHeatmapCanvas() {
+        heatmapCanvas.style.display = 'block';
+    }
+
+</script>
+<!--生成热力图-->
+<script type="module">
+
+</script>
 </body>
 </html>
