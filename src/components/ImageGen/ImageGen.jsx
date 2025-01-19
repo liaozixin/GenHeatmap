@@ -4,23 +4,23 @@ function ImageGen(props) {
     const { normalizedData } = props;
     const [rows, setRows] = useState(0);
     const [cols, setCols] = useState(0);
-    const [influenceRadius, setInfluenceRadius] = useState(12);
+    const [influenceRadius, setInfluenceRadius] = useState(28);
     const [startColor, setStartColor] = useState('#eeeeee');
     const [endColor, setEndColor] = useState('#f86002');
-    const heatmapRef = useRef(null); // 用于引用 heatmap 容器
+    const containerRef = useRef(null); // 用于引用 div 元素
     const heatmapInstanceRef = useRef(null); // 用于保存 heatmap 实例
 
     // 初始化或更新 heatmap.js 实例
     const initHeatmap = () => {
-        if (heatmapRef.current && window.h337) {
+        if (containerRef.current && window.h337) {
             // 销毁旧的 heatmap 实例
             if (heatmapInstanceRef.current) {
                 heatmapInstanceRef.current = null;
             }
 
-            // 创建新的 heatmap 实例
+            // 创建新的 heatmap 实例，并指定渲染到 div
             heatmapInstanceRef.current = window.h337.create({
-                container: heatmapRef.current, // 将热力图渲染到指定的容器中
+                container: containerRef.current, // 将 div 作为容器
                 radius: influenceRadius, // 设置热力点的半径
                 maxOpacity: 0.6, // 最大不透明度
                 minOpacity: 0, // 最小不透明度
@@ -112,7 +112,7 @@ function ImageGen(props) {
                     </div>
                     <div style={{ textAlign: 'center' }}>
                         <div
-                            ref={heatmapRef}
+                            ref={containerRef}
                             style={{
                                 width: '500px',
                                 height: '500px',
